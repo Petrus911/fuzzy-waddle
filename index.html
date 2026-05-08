@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Teaching Clock - Learn to Tell Time</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', 'Comic Neue', 'Comic Sans MS', cursive, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .clocks-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 60px;
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .clock-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 48px;
+            padding: 30px 40px 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body.dark-mode .clock-card {
+            background: rgba(30, 30, 50, 0.95);
+        }
+
+        .clock-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+
+        body.dark-mode .clock-title {
+            color: #a0a0ff;
+        }
+
+        #clock-face {
+            width: 350px;
+            height: 350px;
+            border-radius: 50%;
+            background-color: wheat;
+            border: 8px solid #2c3e50;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+            margin: 0 auto;
+            cursor: grab;
+        }
+
+        #clock-face.dragging {
+            cursor: grabbing;
+        }
+
+        @media (max-width: 850px) {
+            .clocks-container { gap: 30px; padding: 20px; }
+            #clock-face { width: 280px; height: 280px; }
+            .digital-display { font-size: 55px !important; min-width: 200px !important; padding: 15px 20px !important; }
+            .adjust-btn { width: 55px; height: 55px; font-size: 24px; }
+            .direction-toggle { font-size: 14px !important; padding: 10px 18px !important; }
+            .celebration { font-size: 24px !important; padding: 15px 25px !important; }
+        }
+
+        #clock-face::after {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background-color: #2c3e50;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+        }
+
+        .hand-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .hand {
+            position: absolute;
+            left: 50%;
+            bottom: 50%;
+            border-radius: 10px;
+            transform-origin: center bottom;
+            pointer-events: auto;
+            cursor: grab;
+        }
+
+        .hand:active {
+            cursor: grabbing;
+        }
+
+        .hour-hand {
+            width: 12px;
+            height: 100px;
+            background-color: #1114b3;
+            z-index: 15;
+            margin-left: -6px;
+            margin-bottom: -4px;
+        }
+
+        .minute-hand {
+            width: 8px;
+            height: 145px;
+            background-color: #e74c3c;
+            z-index: 20;
+            margin-left: -4px;
+            margin-bottom: -4px;
+        }
+
+        .hand::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -15px;
+            right: -15px;
+            bottom: -10px;
+            background: transparent;
+        }
+
+        body.dark-mode .hour-hand { background-color: #5dade2; }
+        body.dark-mode .minute-hand { background-color: #e67e22; }
+
+        .clock-mark {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background-color: #2c3e50;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .clock-mark.large {
+            width: 8px;
+            height: 8px;
+            background-color: #e74c3c;
+        }
+
+        .hour-number {
+            position: absolute;
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+        }
+
+        body.dark-mode .hour-number {
+            color: #e0e0e0;
+        }
+
+        .digital-display {
+            font-family: 'Courier New', 'Fira Mono', monospace;
+            font-size: 80px;
+            font-weight: bold;
+            background: #1a1a2e;
+            color: #00ff88;
+            padding: 20px 30px;
+            border-radius: 30px;
+            text-align: center;
+            letter-spacing: 8px;
+            min-width: 280px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .digital-display:active {
+            transform: scale(0.98);
+        }
+
+        .digital-adjuster {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .adjust-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 40px;
+            border: none;
+            background: #2c3e50;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .adjust-btn:hover {
+            background: #34495e;
+            transform: scale(1.05);
+        }
+
+        .adjust-btn:active {
+            transform: scale(0.95);
+        }
+
+        .step-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .step-btn {
+            width: 55px;
+            height: 55px;
+            border: none;
+            border-radius: 50%;
+            background: #2c3e50;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .step-btn:hover {
+            background: #34495e;
+            transform: scale(1.05);
+        }
+
+        .reset-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 30px;
+            background: #e74c3c;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 10px;
+        }
+
+        .reset-btn:hover {
+            background: #c0392b;
+        }
+
+        .mode-switcher {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 60px;
+            backdrop-filter: blur(10px);
+            z-index: 200;
+        }
+
+        .mode-btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 40px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.play {
+            background: #27ae60;
+            color: white;
+        }
+
+        .mode-btn.teacher {
+            background: #3498db;
+            color: white;
+        }
+
+        .mode-btn.active {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255,255,255,0.5);
+            border: 2px solid white;
+        }
+
+        .settings-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            z-index: 200;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+
+        .settings-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .settings-panel {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 199;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 200px;
+        }
+
+        body.dark-mode .settings-panel {
+            background: #2c3e50;
+        }
+
+        .settings-panel.show {
+            display: flex;
+        }
+
+        .skin-label {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .skin-options {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .skin-btn {
+            width: 35px;
+            height: 35px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .skin-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .direction-toggle {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #f39c12;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 150;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: none;
+            white-space: nowrap;
+        }
+
+        .direction-toggle:hover {
+            transform: translateX(-50%) scale(1.05);
+            background: #e67e22;
+        }
+
+        .direction-toggle.show {
+            display: block;
+        }
+
+        /* CELEBRATION ANIMATION */
+        .celebration {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #f39c12, #e74c3c);
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            padding: 30px 50px;
+            border-radius: 80px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            z-index: 1000;
+            text-align: center;
+            white-space: nowrap;
+            animation: celebrate 1.5s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes celebrate {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            20% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            40% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+            60% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.05);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+                visibility: hidden;
+            }
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            position: absolute;
+            animation: confetti-fall 1.5s ease-out forwards;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                opacity: 1;
+                transform: translateY(0) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(300px) rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mode-switcher">
+        <button class="mode-btn play active" id="play-mode-btn">🎮 Play Mode</button>
+        <button class="mode-btn teacher" id="teacher-mode-btn">👩‍🏫 Teacher Mode</button>
+    </div>
+
+    <button class="direction-toggle" id="direction-toggle">
+        🎯 Start Challenge (Student sets ANALOG)
+    </button>
+
+    <button class="settings-btn" id="settings-btn">⚙️</button>
+    <div class="settings-panel" id="settings-panel">
+        <div>
+            <div class="skin-label">🌙 Dark Mode</div>
+            <button id="theme-toggle-settings" style="padding: 8px 16px; border-radius: 20px; cursor: pointer; width: 100%;">Toggle Dark Mode</button>
+        </div>
+        <div>
+            <div class="skin-label">🎨 Clock Colors</div>
+            <div class="skin-options">
+                <button class="skin-btn" data-color="wheat" style="background: wheat;"></button>
+                <button class="skin-btn" data-color="#87CEEB" style="background: #87CEEB;"></button>
+                <button class="skin-btn" data-color="#98FB98" style="background: #98FB98;"></button>
+                <button class="skin-btn" data-color="#FFB6C1" style="background: #FFB6C1;"></button>
+                <button class="skin-btn" data-color="#DDA0DD" style="background: #DDA0DD;"></button>
+                <button class="skin-btn" data-color="#2c3e50" style="background: #2c3e50;"></button>
+            </div>
+        </div>
+        <div>
+            <div class="skin-label">🎨 Digital Color</div>
+            <div class="skin-options">
+                <button class="display-skin" data-display="#00ff88" style="background: #00ff88;"></button>
+                <button class="display-skin" data-display="#ff4444" style="background: #ff4444;"></button>
+                <button class="display-skin" data-display="#ffaa44" style="background: #ffaa44;"></button>
+                <button class="display-skin" data-display="#44aaff" style="background: #44aaff;"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="clocks-container">
+        <div class="clock-card" id="analog-card">
+            <div class="clock-title">🕐 ANALOG CLOCK</div>
+            <div id="clock-face">
+                <div class="hand-container" id="hour-hand-container">
+                    <div class="hand hour-hand"></div>
+                </div>
+                <div class="hand-container" id="minute-hand-container">
+                    <div class="hand minute-hand"></div>
+                </div>
+            </div>
+            <div class="step-controls">
+                <button id="step-backward" class="step-btn" title="Back 1 minute">◀◀</button>
+                <button id="step-forward" class="step-btn" title="Forward 1 minute">▶▶</button>
+                <button id="reset-clock" class="reset-btn" title="Reset to 12:00">↺ Reset</button>
+            </div>
+        </div>
+
+        <div class="clock-card" id="digital-card">
+            <div class="clock-title">💻 DIGITAL CLOCK</div>
+            <div class="digital-display" id="big-digital-display">12:00</div>
+            <div class="digital-adjuster" id="digital-adjuster">
+                <button class="adjust-btn" id="digital-hour-up">▲ Hr</button>
+                <button class="adjust-btn" id="digital-hour-down">▼ Hr</button>
+                <button class="adjust-btn" id="digital-minute-up">▲ Min</button>
+                <button class="adjust-btn" id="digital-minute-down">▼ Min</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ELEMENTS
+        const clockFace = document.querySelector('#clock-face');
+        const hourHandContainer = document.querySelector('#hour-hand-container');
+        const minuteHandContainer = document.querySelector('#minute-hand-container');
+        const hourHand = document.querySelector('.hour-hand');
+        const minuteHand = document.querySelector('.minute-hand');
+        const bigDigitalDisplay = document.querySelector('#big-digital-display');
+        const stepForwardBtn = document.querySelector('#step-forward');
+        const stepBackwardBtn = document.querySelector('#step-backward');
+        const resetBtn = document.querySelector('#reset-clock');
+        const digitalHourUp = document.querySelector('#digital-hour-up');
+        const digitalHourDown = document.querySelector('#digital-hour-down');
+        const digitalMinuteUp = document.querySelector('#digital-minute-up');
+        const digitalMinuteDown = document.querySelector('#digital-minute-down');
+
+        const playModeBtn = document.querySelector('#play-mode-btn');
+        const teacherModeBtn = document.querySelector('#teacher-mode-btn');
+        const directionToggle = document.querySelector('#direction-toggle');
+        const settingsBtn = document.querySelector('#settings-btn');
+        const settingsPanel = document.querySelector('#settings-panel');
+        const themeToggle = document.querySelector('#theme-toggle-settings');
+
+        // STATE
+        let isDraggingHour = false;
+        let isDraggingMinute = false;
+        let isDarkMode = false;
+        let clockRect = null;
+        let totalMinutes = 0;
+        let mode = "play";
+        let currentChallenge = null; // "analog" or "digital" - which clock the student must set
+        let targetHour = null;
+        let targetMinute = null;
+        let waitingForAnswer = false;
+
+        // CREATE CLOCK MARKS AND NUMBERS
+        function createClockMarks() {
+            const radius = 165;
+            
+            const existingMarks = clockFace.querySelectorAll('.clock-mark, .hour-number');
+            existingMarks.forEach(mark => mark.remove());
+            
+            for (let i = 0; i < 60; i++) {
+                const mark = document.createElement('div');
+                mark.className = 'clock-mark';
+                if (i % 5 === 0) {
+                    mark.classList.add('large');
+                }
+                
+                const angle = i * 6 * (Math.PI / 180);
+                const x = Math.sin(angle) * (radius - 10);
+                const y = -Math.cos(angle) * (radius - 10);
+                
+                mark.style.left = `calc(50% + ${x}px)`;
+                mark.style.top = `calc(50% + ${y}px)`;
+                clockFace.appendChild(mark);
+            }
+            
+            for (let i = 1; i <= 12; i++) {
+                const hourNum = document.createElement('div');
+                hourNum.className = 'hour-number';
+                hourNum.innerText = i;
+                
+                const angle = (i * 30 - 90) * (Math.PI / 180);
+                const distance = radius - 35;
+                const x = Math.cos(angle) * distance;
+                const y = Math.sin(angle) * distance;
+                
+                hourNum.style.left = `calc(50% + ${x}px)`;
+                hourNum.style.top = `calc(50% + ${y}px)`;
+                clockFace.appendChild(hourNum);
+            }
+        }
+
+        // CELEBRATION FUNCTION - TESTED AND WORKING
+        function showCelebration(whichClock) {
+            console.log("CELEBRATION TRIGGERED!", whichClock);
+            
+            const messages = [
+                "🎉 Hooray! 🎉", "⭐ Well Done! ⭐", "🌟 Perfect! 🌟", 
+                "🎈 Excellent! 🎈", "🏆 Great Job! 🏆", "💪 You Got It! 💪"
+            ];
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            
+            const celebration = document.createElement('div');
+            celebration.className = 'celebration';
+            celebration.textContent = randomMessage;
+            document.body.appendChild(celebration);
+            
+            // Confetti
+            for (let i = 0; i < 80; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * window.innerWidth + 'px';
+                confetti.style.top = (window.innerHeight / 2) + 'px';
+                confetti.style.background = `hsl(${Math.random() * 360}, 70%, 60%)`;
+                confetti.style.width = (Math.random() * 10 + 5) + 'px';
+                confetti.style.height = (Math.random() * 10 + 5) + 'px';
+                confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                document.body.appendChild(confetti);
+                
+                setTimeout(() => confetti.remove(), 1500);
+            }
+            
+            setTimeout(() => celebration.remove(), 1500);
+            
+            // Flash the correct card
+            const card = whichClock === 'analog' ? document.getElementById('analog-card') : document.getElementById('digital-card');
+            card.style.transform = 'scale(1.02)';
+            card.style.transition = 'transform 0.2s';
+            setTimeout(() => { card.style.transform = ''; }, 300);
+        }
+
+        // HELPER FUNCTIONS
+        function formatTime(hour, minute) {
+            const hourStr = hour < 10 ? '0' + hour : hour;
+            const minuteStr = minute < 10 ? '0' + minute : minute;
+            return `${hourStr}:${minuteStr}`;
+        }
+
+        function minutesToTime(totalMins) {
+            let mins = ((totalMins % 60) + 60) % 60;
+            let hoursRaw = Math.floor(totalMins / 60);
+            let hours = ((hoursRaw % 12) + 12) % 12;
+            if (hours === 0) hours = 12;
+            return { hour: hours, minute: mins };
+        }
+
+        function timeToMinutes(hour, minute) {
+            return ((hour % 12) * 60) + minute;
+        }
+
+        function getCurrentTime() {
+            return minutesToTime(totalMinutes);
+        }
+
+        function updateHandsFromTotalMinutes() {
+            const time = minutesToTime(totalMinutes);
+            const minuteAngle = time.minute * 6;
+            const hourAngle = (totalMinutes % 720) * 0.5;
+            
+            minuteHand.style.transform = `rotate(${minuteAngle}deg)`;
+            hourHand.style.transform = `rotate(${hourAngle}deg)`;
+        }
+
+        function setTime(hour, minute) {
+            totalMinutes = timeToMinutes(hour, minute);
+            updateHandsFromTotalMinutes();
+        }
+
+        function setDigitalTime(hour, minute) {
+            hour = ((hour % 12) + 12) % 12;
+            if (hour === 0) hour = 12;
+            bigDigitalDisplay.innerText = formatTime(hour, minute);
+        }
+
+        function getCurrentDigitalTime() {
+            let text = bigDigitalDisplay.innerText;
+            let parts = text.split(':');
+            return {
+                hour: parseInt(parts[0]),
+                minute: parseInt(parts[1])
+            };
+        }
+
+        function syncDigitalFromAnalog() {
+            if (mode === "play") {
+                const analog = getCurrentTime();
+                setDigitalTime(analog.hour, analog.minute);
+            }
+        }
+
+        // CHECK IF STUDENT ANSWERED CORRECTLY
+        function checkAnswer() {
+            if (!waitingForAnswer) return false;
+            
+            let isCorrect = false;
+            
+            if (currentChallenge === "analog") {
+                // Student must set ANALOG clock to match target (from digital)
+                const analog = getCurrentTime();
+                const minuteMatch = Math.abs(analog.minute - targetMinute) <= 2;
+                if (analog.hour === targetHour && minuteMatch) {
+                    isCorrect = true;
+                    console.log("CORRECT! Analog matches target", targetHour, targetMinute);
+                }
+            } else if (currentChallenge === "digital") {
+                // Student must set DIGITAL clock to match target (from analog)
+                const digital = getCurrentDigitalTime();
+                const minuteMatch = Math.abs(digital.minute - targetMinute) <= 1;
+                if (digital.hour === targetHour && minuteMatch) {
+                    isCorrect = true;
+                    console.log("CORRECT! Digital matches target", targetHour, targetMinute);
+                }
+            }
+            
+            if (isCorrect) {
+                waitingForAnswer = false;
+                const winningClock = currentChallenge === "analog" ? "analog" : "digital";
+                showCelebration(winningClock);
+                directionToggle.style.background = "#27ae60";
+                directionToggle.innerHTML = "✅ CORRECT! Click to start new challenge";
+                
+                setTimeout(() => {
+                    if (!waitingForAnswer && mode === "teacher") {
+                        directionToggle.style.background = "#f39c12";
+                        directionToggle.innerHTML = "🎯 Click to start new challenge";
+                    }
+                }, 2500);
+                return true;
+            }
+            return false;
+        }
+
+        // START A NEW CHALLENGE
+        function startNewChallenge() {
+            // Toggle between challenge types
+            if (currentChallenge === "analog") {
+                currentChallenge = "digital";
+                directionToggle.innerHTML = "🎯 Student sets: DIGITAL (match the analog)";
+            } else {
+                currentChallenge = "analog";
+                directionToggle.innerHTML = "🎯 Student sets: ANALOG (match the digital)";
+            }
+            
+            // Save the target time from the teacher's clock
+            if (currentChallenge === "analog") {
+                // Teacher sets DIGITAL, student sets ANALOG
+                const digital = getCurrentDigitalTime();
+                targetHour = digital.hour;
+                targetMinute = digital.minute;
+                
+                // Randomize analog position
+                const randomMinutes = Math.floor(Math.random() * 1440);
+                setTimeFromMinutes(randomMinutes);
+                
+                console.log("New challenge: Student sets ANALOG to match", targetHour, targetMinute);
+            } else {
+                // Teacher sets ANALOG, student sets DIGITAL
+                const analog = getCurrentTime();
+                targetHour = analog.hour;
+                targetMinute = analog.minute;
+                
+                // Randomize digital position
+                const randomHour = Math.floor(Math.random() * 12) + 1;
+                const randomMinute = Math.floor(Math.random() * 60);
+                setDigitalTime(randomHour, randomMinute);
+                
+                console.log("New challenge: Student sets DIGITAL to match", targetHour, targetMinute);
+            }
+            
+            waitingForAnswer = true;
+            directionToggle.style.background = "#e74c3c";
+        }
+
+        function setTimeFromMinutes(minutes) {
+            totalMinutes = Math.round(minutes);
+            if (totalMinutes < 0) totalMinutes += 1440;
+            if (totalMinutes >= 1440) totalMinutes -= 1440;
+            updateHandsFromTotalMinutes();
+        }
+
+        // DRAG HANDLERS
+        function getAngleFromMouse(event, rect) {
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const deltaX = event.clientX - centerX;
+            const deltaY = event.clientY - centerY;
+            let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
+            return (angle + 360) % 360;
+        }
+
+        function handleMinuteDrag(event) {
+            if (!isDraggingMinute || !clockRect) return;
+            const angle = getAngleFromMouse(event, clockRect);
+            const newMinute = Math.round(angle / 6) % 60;
+            const currentTime = getCurrentTime();
+            
+            let newTotalMinutes = timeToMinutes(currentTime.hour, newMinute);
+            
+            if (newMinute < currentTime.minute && (currentTime.minute - newMinute) > 30) {
+                newTotalMinutes += 60;
+            } else if (newMinute > currentTime.minute && (newMinute - currentTime.minute) > 30) {
+                newTotalMinutes -= 60;
+            }
+            
+            totalMinutes = newTotalMinutes;
+            if (totalMinutes < 0) totalMinutes += 1440;
+            if (totalMinutes >= 1440) totalMinutes -= 1440;
+            
+            updateHandsFromTotalMinutes();
+            
+            if (mode === "play") {
+                syncDigitalFromAnalog();
+            } else if (mode === "teacher") {
+                checkAnswer();
+            }
+        }
+
+        function handleHourDrag(event) {
+            if (!isDraggingHour || !clockRect) return;
+            const angle = getAngleFromMouse(event, clockRect);
+            let rawHour = angle / 30;
+            let newHour = Math.round(rawHour) % 12;
+            if (newHour === 0) newHour = 12;
+            
+            const currentTime = getCurrentTime();
+            let newTotalMinutes = timeToMinutes(newHour, currentTime.minute);
+            
+            const hourDiff = (newHour - currentTime.hour + 12) % 12;
+            if (hourDiff > 6) {
+                newTotalMinutes -= 720;
+            }
+            
+            totalMinutes = newTotalMinutes;
+            if (totalMinutes < 0) totalMinutes += 1440;
+            if (totalMinutes >= 1440) totalMinutes -= 1440;
+            
+            updateHandsFromTotalMinutes();
+            
+            if (mode === "play") {
+                syncDigitalFromAnalog();
+            } else if (mode === "teacher") {
+                checkAnswer();
+            }
+        }
+
+        // EVENT LISTENERS FOR DRAGGING
+        minuteHandContainer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isDraggingMinute = true;
+            clockRect = clockFace.getBoundingClientRect();
+            clockFace.style.cursor = 'grabbing';
+        });
+
+        hourHandContainer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isDraggingHour = true;
+            clockRect = clockFace.getBoundingClientRect();
+            clockFace.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDraggingMinute) {
+                handleMinuteDrag(e);
+            } else if (isDraggingHour) {
+                handleHourDrag(e);
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDraggingMinute = false;
+            isDraggingHour = false;
+            clockFace.style.cursor = 'grab';
+        });
+
+        // DIGITAL ADJUSTER
+        function adjustDigital(deltaHour, deltaMinute) {
+            let current = getCurrentDigitalTime();
+            let newHour = current.hour + deltaHour;
+            let newMinute = current.minute + deltaMinute;
+            
+            if (newMinute < 0) {
+                newMinute = 59;
+                newHour -= 1;
+            }
+            if (newMinute > 59) {
+                newMinute = 0;
+                newHour += 1;
+            }
+            
+            newHour = ((newHour % 12) + 12) % 12;
+            if (newHour === 0) newHour = 12;
+            
+            setDigitalTime(newHour, newMinute);
+            
+            if (mode === "play") {
+                setTime(newHour, newMinute);
+                updateHandsFromTotalMinutes();
+            } else if (mode === "teacher") {
+                checkAnswer();
+            }
+        }
+
+        digitalHourUp.addEventListener('click', () => adjustDigital(1, 0));
+        digitalHourDown.addEventListener('click', () => adjustDigital(-1, 0));
+        digitalMinuteUp.addEventListener('click', () => adjustDigital(0, 1));
+        digitalMinuteDown.addEventListener('click', () => adjustDigital(0, -1));
+
+        // STEP BUTTONS
+        stepForwardBtn.addEventListener('click', () => {
+            totalMinutes += 1;
+            if (totalMinutes >= 1440) totalMinutes -= 1440;
+            updateHandsFromTotalMinutes();
+            
+            if (mode === "play") {
+                syncDigitalFromAnalog();
+            } else if (mode === "teacher") {
+                checkAnswer();
+            }
+        });
+        
+        stepBackwardBtn.addEventListener('click', () => {
+            totalMinutes -= 1;
+            if (totalMinutes < 0) totalMinutes += 1440;
+            updateHandsFromTotalMinutes();
+            
+            if (mode === "play") {
+                syncDigitalFromAnalog();
+            } else if (mode === "teacher") {
+                checkAnswer();
+            }
+        });
+        
+        resetBtn.addEventListener('click', () => {
+            setTime(12, 0);
+            if (mode === "play") {
+                setDigitalTime(12, 0);
+            }
+            syncDigitalFromAnalog();
+        });
+
+        // TOGGLE BUTTON - starts a new challenge
+        directionToggle.addEventListener('click', () => {
+            if (mode !== "teacher") return;
+            startNewChallenge();
+        });
+
+        // MODE SWITCHING
+        playModeBtn.addEventListener('click', () => {
+            mode = "play";
+            playModeBtn.classList.add('active');
+            teacherModeBtn.classList.remove('active');
+            directionToggle.classList.remove('show');
+            waitingForAnswer = false;
+            currentChallenge = null;
+            
+            const analog = getCurrentTime();
+            setDigitalTime(analog.hour, analog.minute);
+        });
+
+        teacherModeBtn.addEventListener('click', () => {
+            mode = "teacher";
+            teacherModeBtn.classList.add('active');
+            playModeBtn.classList.remove('active');
+            directionToggle.classList.add('show');
+            waitingForAnswer = false;
+            currentChallenge = null;
+            
+            // Reset both clocks
+            setTime(12, 0);
+            setDigitalTime(12, 0);
+            directionToggle.style.background = "#f39c12";
+            directionToggle.innerHTML = "🎯 Click to start new challenge";
+        });
+
+        // SETTINGS
+        settingsBtn.addEventListener('click', () => {
+            settingsPanel.classList.toggle('show');
+        });
+
+        themeToggle.addEventListener('click', () => {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+        });
+
+        document.querySelectorAll('.skin-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const color = btn.getAttribute('data-color');
+                if (color) {
+                    clockFace.style.backgroundColor = color;
+                }
+            });
+        });
+
+        document.querySelectorAll('.display-skin').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const color = btn.getAttribute('data-display');
+                if (color) {
+                    bigDigitalDisplay.style.color = color;
+                }
+            });
+        });
+
+        // INITIALIZE
+        createClockMarks();
+        setTime(12, 0);
+        setDigitalTime(12, 0);
+        clockFace.style.cursor = 'grab';
+    </script>
+</body>
+</html>
